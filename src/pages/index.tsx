@@ -11,105 +11,177 @@ const geistMono = localFont({
   variable: "--font-geist-mono",
   weight: "100 900",
 });
+import * as React from "react";
+import { useState, useEffect, useCallback } from "react";
 
-export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+const FLASH_DURATION = 1000; // 0.7 seconds
+const ROUNDS = 2;
+const LETTERS_PER_ROUND = 6;
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+export default function FlashMemoryGame() {
+  const [gameState, setGameState] = useState("ready");
+  const [currentRound, setCurrentRound] = useState(0);
+  const [flashLetters, setFlashLetters] = useState("");
+  const [userInput, setUserInput] = useState("");
+  const [roundResults, setRoundResults] = useState([] as { timeTaken: number; correctGuesses: number }[]);
+  const [startTime, setStartTime] = useState(0);
+
+  const generateLetters = useCallback(() => {
+    return Array.from({ length: LETTERS_PER_ROUND }, () =>
+      String.fromCharCode(65 + Math.floor(Math.random() * 26))
+    ).join("").toUpperCase();
+  }, []);
+
+  const startRound = useCallback(() => {
+    const letters = generateLetters();
+    setFlashLetters(letters);
+    setGameState("flashing");
+    setStartTime(Date.now());
+
+    setTimeout(() => {
+      setGameState("guessing");
+    }, FLASH_DURATION);
+  }, [generateLetters]);
+
+  const submitGuess = useCallback(() => {
+    const endTime = Date.now();
+    const timeTaken = (endTime - startTime) / 1000;
+    const correctGuessesArray = userInput
+      .toUpperCase()
+      .split("")
+    console.log('correctGuessesArray', correctGuessesArray);
+    console.log('flashLetters', flashLetters);
+    const amountCorrect = correctGuessesArray.filter((char, index) => char === flashLetters[index]).length;
+
+    setRoundResults([...roundResults, { timeTaken, correctGuesses: amountCorrect }]);
+    setUserInput("");
+
+    if (currentRound < ROUNDS - 1) {
+      setCurrentRound(currentRound + 1);
+      startRound();
+    } else {
+      setGameState("finished");
+    }
+  }, [currentRound, flashLetters, roundResults, startTime, userInput]);
+
+  useEffect(() => {
+    if (gameState === "ready") {
+      const handleKeyPress = () => {
+        startRound();
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+
+      // Add event listener for any key press
+      window.addEventListener('keydown', handleKeyPress);
+    }
+  }, [gameState]);
+
+  const renderContent = () => {
+    switch (gameState) {
+      case "ready":
+        return (
+          <div>
+            <div className="text-2xl font-bold mb-4">
+              Flash Memory Game
+            </div>
+            <button
+              className="btn btn-primary text-lg"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setGameState("flashing");
+                }
+              }}
+            >
+              Press Enter to Start
+            </button>
+          </div>
+        );
+      case "flashing":
+        return (
+          <div className="text-4xl font-bold tracking-widest">
+            {flashLetters}
+          </div>
+        );
+      case "guessing":
+        return (
+          <div>
+            <div className="text-xl mb-4">
+              Enter the letters you saw:
+            </div>
+            <input
+              autoFocus
+              className="input w-64 text-lg p-2 border-2 border-gray-300 rounded"
+              maxLength={LETTERS_PER_ROUND}
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  submitGuess();
+                }
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <div>
+              <button
+                className="btn btn-primary mt-4 text-lg"
+                onClick={submitGuess}
+              >
+                Press Enter to Submit
+              </button>
+            </div>
+          </div>
+        );
+      case "finished":
+        const handleKeyPress = () => {
+          window.removeEventListener('keydown', handleKeyPress);
+          // reset values
+          setGameState("ready");
+          setCurrentRound(0);
+          setRoundResults([]);
+        }
+        setTimeout(() => window.addEventListener('keydown', handleKeyPress), 1000);
+        const totalCorrect = roundResults.reduce((sum, round) => sum + round?.correctGuesses, 0);
+        const totalTime = roundResults.reduce((sum, round) => sum + round?.timeTaken, 0);
+        const averageTime = totalTime / ROUNDS;
+        return (
+          <div>
+            <div className="text-2xl font-bold mb-4">
+              Game Finished!
+            </div>
+            <div className="text-xl mb-2">
+              Total Correct: {totalCorrect}/{ROUNDS * LETTERS_PER_ROUND}
+            </div>
+            <div className="text-xl mb-2">
+              Total Time: {totalTime.toFixed(2)} seconds
+            </div>
+            <div className="text-xl mb-4">
+              Average Time per round: {averageTime.toFixed(2)} seconds
+            </div>
+            <button
+              className="btn btn-primary text-lg"
+              onClick={() => {
+                setGameState("ready");
+                setCurrentRound(0);
+                setRoundResults([]);
+              }}
+            >
+              Press Enter To Play Again
+            </button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="h-screen bg-gray-100 flex items-center justify-center">
+      {gameState === 'guessing' && (<div className="text-xl mb-4 flex items-center justify-center">
+        Round: {currentRound + 1}/{ROUNDS}
+      </div>)
+      }
+      <div>
+        {renderContent()}
+      </div>
     </div>
   );
 }
