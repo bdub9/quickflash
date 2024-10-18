@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
 
 const FLASH_DURATION = 1000; // 0.7 seconds
-const ROUNDS = 2;
+const ROUNDS = 10;
 const LETTERS_PER_ROUND = 6;
 
 export default function FlashMemoryGame() {
